@@ -39,6 +39,7 @@ def checksum(string):
 
 
 def receiveOnePing(mySocket, ID, timeout, destAddr):
+    global rtt_min, rtt_max, rtt_sum, rtt_cnt
     timeLeft = timeout
 
     while 1:
