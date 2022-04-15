@@ -48,8 +48,7 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         timeReceived = time.time()
         recPacket, addr = mySocket.recvfrom(1024)
         # Fill in start
-        icmpHeader = recPacket[20:28]
-        icmpType, code, mychecksum, packetID, sequence = struct.unpack("bbHHh", icmpHeader)
+        type, code, checksum, id, seq = struct.unpack('bbHHh', recPacket[20:28])
 
         if type != 0:
             return 'expected type=0, but got {}'.format(type)
