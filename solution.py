@@ -136,7 +136,8 @@ def ping(host, timeout=1):
     try:
         while True:
             cnt += 1
-            print doOnePing(dest, timeout)
+            delay = doOnePing(dest, timeout)
+            print(delay)
             time.sleep(1)
     except KeyboardInterrupt:
         if cnt != 0:
