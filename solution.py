@@ -5,7 +5,6 @@ import struct
 import time
 import select
 import binascii
-
 # Should use stdev
 
 ICMP_ECHO_REQUEST = 8
@@ -34,6 +33,7 @@ def checksum(string):
     return answer
 
 
+
 def receiveOnePing(mySocket, ID, timeout, destAddr):
     timeLeft = timeout
 
@@ -46,15 +46,10 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
 
         timeReceived = time.time()
         recPacket, addr = mySocket.recvfrom(1024)
-		# Fill in start
-        icmpHeader = recPacket[20:28]
-        icmpType, code, mychecksum, packetID, sequence = struct.unpack("bbHHh", icmpHeader)
-    
-        if type != 8 and packetID == ID:
-            bytesInDouble = struct.calcsize("d")
-            timeSent = struct.unpack("d", recPacket[28:28 + bytesInDouble])[0]
-            return timeReceived - timeSent
-	    # Fetch the ICMP header from the IP packet
+
+        # Fill in start
+
+        # Fetch the ICMP header from the IP packet
 
         # Fill in end
         timeLeft = timeLeft - howLongInSelect
@@ -81,19 +76,21 @@ def sendOnePing(mySocket, destAddr, ID):
     else:
         myChecksum = htons(myChecksum)
 
+
     header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, myChecksum, ID, 1)
     packet = header + data
 
     mySocket.sendto(packet, (destAddr, 1))  # AF_INET address must be tuple, not str
 
+
     # Both LISTS and TUPLES consist of a number of objects
     # which can be referenced by their position number within the object.
-
 
 def doOnePing(destAddr, timeout):
     icmp = getprotobyname("icmp")
 
-    # SOCK_RAW is a powerful socket type. For more details:   https://sock-raw.org/papers/sock_raw
+
+    # SOCK_RAW is a powerful socket type. For more details:   http://sockraw.org/papers/sock_raw
     mySocket = socket(AF_INET, SOCK_RAW, icmp)
 
     myID = os.getpid() & 0xFFFF  # Return the current process i
@@ -104,25 +101,19 @@ def doOnePing(destAddr, timeout):
 
 
 def ping(host, timeout=1):
-    # timeout=1 means: If one second goes by without a reply from the server,
-    # the client assumes that either the client's ping or the server's pong is lost
+    # timeout=1 means: If one second goes by without a reply from the server,  	# the client assumes that either the client's ping or the server's pong is lost
     dest = gethostbyname(host)
     print("Pinging " + dest + " using Python:")
     print("")
-
+    # Calculate vars values and return them
+    #  vars = [str(round(packet_min, 2)), str(round(packet_avg, 2)), str(round(packet_max, 2)),str(round(stdev(stdev_var), 2))]
     # Send ping requests to a server separated by approximately one second
-    # Add something here to collect the delays of each ping in a list so you can calculate vars after your ping
-
-    for i in range(0, 4):  # Four pings will be sent (loop runs for i=0, 1, 2, 3)
+    for i in range(0,4):
         delay = doOnePing(dest, timeout)
         print(delay)
         time.sleep(1)  # one second
 
-    # You should have the values of delay for each ping here; fill in calculation for packet_min, packet_avg, packet_max, and stdev
-    vars = [str(round(packet_min, 8)), str(round(packet_avg, 8)), str(round(packet_max, 8)),str(round(stdev(stdev_var), 8))]
-
     return vars
-
 
 if __name__ == '__main__':
     ping("google.co.il")
