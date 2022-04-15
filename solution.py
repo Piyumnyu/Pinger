@@ -3,9 +3,12 @@ import os
 import sys
 import struct
 import time
+import statistics
+import binascii
 import select
 import socket
-import binascii
+
+
 # Should use stdev
 
 ICMP_ECHO_REQUEST = 8
@@ -123,25 +126,29 @@ def doOnePing(destAddr, timeout):
 
 
 def ping(host, timeout=1):
-    global rtt_min, rtt_max, rtt_sum, rtt_cnt
-    rtt_min = float('+inf')
-    rtt_max = float('-inf')
-    rtt_sum = 0
-    rtt_cnt = 0
-    cnt = 0
+
     # timeout=1 means: If one second goes by without a reply from the server,  	# the client assumes that either the client's ping or the server's pong is lost
     dest = gethostbyname(host)
     print("Pinging " + dest + " using Python:")
     print("")
+    TotalPing = []
+    vars = []
     # Calculate vars values and return them
     #  vars = [str(round(packet_min, 2)), str(round(packet_avg, 2)), str(round(packet_max, 2)),str(round(stdev(stdev_var), 2))]
     # Send ping requests to a server separated by approximately one second
     for i in range(0,4):
         delay = doOnePing(dest, timeout)
+        TotalPing.append(delay)
         print(delay)
         time.sleep(1)  # one second
-        vars = [
-            (str(round(packet_min, 8)), str(round(packet_avg, 8)), str(round(packet_max, 8)), str(round(stdev_var), 8))]
+    global rttpacket_min, rttpacket_max, rttpacket_avg, stdev_var
+    rttpacket_avg = min(TotalPing)
+    rttpacket_avg = sum(TotalPing) / len(TotalPing)
+    rttpacket_max = max(TotalPing)
+    stdev_var = statistics.stdev(TotalPing)
+    vars = [str(round(rttpacket_min, 8)), str(round(rttpacket_avg, 8)), str(round(rttpacket_max, 8)),
+            str(round(stdev(stdev_var), 8))]
+    print("round-trip min/avg/max/stddev = ", vars[0], "/", vars[1], "/", vars[2], "/", vars[3], " ms")
     return vars
 
 if __name__ == '__main__':
