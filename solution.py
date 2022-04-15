@@ -6,7 +6,7 @@ import time
 import statistics
 import binascii
 import select
-import socket
+
 
 
 # Should use stdev
@@ -39,9 +39,7 @@ def checksum(string):
 
 
 def receiveOnePing(mySocket, ID, timeout, destAddr):
-    global rtt_min, rtt_max, rtt_sum, rtt_cnt
     timeLeft = timeout
-
     while 1:
         startedSelect = time.time()
         whatReady = select.select([mySocket], [], [], timeLeft)
@@ -55,27 +53,12 @@ def receiveOnePing(mySocket, ID, timeout, destAddr):
         # Fill in start
 
         # Fetch the ICMP header from the IP packet
-        type, code, checksum, id, seq = struct.unpack('bbHHh', recPacket[20:28])
-        if type != 0:
-            return 'expected type=0, but got {}'.format(type)
-        if code != 0:
-            return 'expected code=0, but got {}'.format(code)
-        if ID != id:
-            return 'expected id={}, but got {}'.format(ID, id)
-        send_time,  = struct.unpack('d', recPacket[28:])
-        
-        rtt = (timeReceived - send_time) * 1000
-        rtt_cnt += 1
-        rtt_sum += rtt
-        rtt_min = min(rtt_min, rtt)
-        rtt_max = max(rtt_max, rtt)
+        icmpHeaderByte = recPacket[20:28]
+        Type, Code, Checksum, Identifier, SequenceNo = struct.unpack('bbHHh',icmpHeaderByte)
+        if ID == Identifier:
+            timeFromICMPPayloadData = struct.unpack('d',recPacket[28:28 + (struct.calcsize('d'))])[0]
+            return timeReceived - timeFromICMPPayloadData
 
-        ip_header = struct.unpack('!BBHHHBBH4s4s' , recPacket[:20])
-        ttl = ip_header[5]
-        saddr = socket.inet_ntoa(ip_header[8])
-        length = len(recPacket) - 20
-
-        return '{} bytes from {}: icmp_seq={} ttl={} time={:.3f} ms'.format(length, saddr, seq, ttl, rtt)
         # Fill in end
         timeLeft = timeLeft - howLongInSelect
         if timeLeft <= 0:
@@ -96,10 +79,10 @@ def sendOnePing(mySocket, destAddr, ID):
     # Get the right checksum, and put in the header
 
     if sys.platform == 'darwin':
-        myChecksum = socket.htons(myChecksum) & 0xffff
+        myChecksum = htons(myChecksum) & 0xffff
         #Convert 16-bit integers from host to network byte order.
     else:
-        myChecksum = socket.htons(myChecksum)
+        myChecksum = htons(myChecksum)
 
 
     header = struct.pack("bbHHh", ICMP_ECHO_REQUEST, 0, myChecksum, ID, 1)
@@ -112,11 +95,11 @@ def sendOnePing(mySocket, destAddr, ID):
     # which can be referenced by their position number within the object.
 
 def doOnePing(destAddr, timeout):
-    icmp = socket.getprotobyname("icmp")
+    icmp = getprotobyname("icmp")
 
 
     # SOCK_RAW is a powerful socket type. For more details:   http://sockraw.org/papers/sock_raw
-    mySocket = socket.socket(socket.AF_INET, socket.SOCK_RAW, icmp)
+    mySocket = socket(AF_INET, SOCK_RAW, icmp)
 
     myID = os.getpid() & 0xFFFF  # Return the current process i
     sendOnePing(mySocket, destAddr, myID)
@@ -131,24 +114,18 @@ def ping(host, timeout=1):
     dest = gethostbyname(host)
     print("Pinging " + dest + " using Python:")
     print("")
-    TotalPing = []
-    vars = []
+    
     # Calculate vars values and return them
     #  vars = [str(round(packet_min, 2)), str(round(packet_avg, 2)), str(round(packet_max, 2)),str(round(stdev(stdev_var), 2))]
+    TotalPing = []
     # Send ping requests to a server separated by approximately one second
     for i in range(0,4):
         delay = doOnePing(dest, timeout)
         TotalPing.append(delay)
         print(delay)
         time.sleep(1)  # one second
-    global rttpacket_min, rttpacket_max, rttpacket_avg, stdev_var
-    rttpacket_avg = min(TotalPing)
-    rttpacket_avg = sum(TotalPing) / len(TotalPing)
-    rttpacket_max = max(TotalPing)
-    stdev_var = statistics.stdev(TotalPing)
-    vars = [str(round(rttpacket_min, 8)), str(round(rttpacket_avg, 8)), str(round(rttpacket_max, 8)),
-            str(round(stdev(stdev_var), 8))]
-    print("round-trip min/avg/max/stddev = ", vars[0], "/", vars[1], "/", vars[2], "/", vars[3], " ms")
+
+    vars = [str(round(min(TotalPing), 8)), str(round(statistics.mean(TotalPing), 8)), str(round(max(TotalPing), 8)),str(round(statistics.stdev(TotalPing), 8))]
     return vars
 
 if __name__ == '__main__':
