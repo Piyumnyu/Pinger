@@ -140,7 +140,8 @@ def ping(host, timeout=1):
         delay = doOnePing(dest, timeout)
         print(delay)
         time.sleep(1)  # one second
-
+        vars = [
+            (str(round(packet_min, 8)), str(round(packet_avg, 8)), str(round(packet_max, 8)), str(round(stdev_var), 8))]
     return vars
 
 if __name__ == '__main__':
